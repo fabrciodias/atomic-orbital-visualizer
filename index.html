@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Volumetric Simulator | Hydrogen</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="quantum-panel">
+        <h3>Controle de Estado</h3>
+        <div class="input-group">
+            <label for="input-n">Principal (n):</label>
+            <input type="number" id="input-n" value="4" min="1" step="1">
+        </div>
+        <div class="input-group">
+            <label for="input-l">Angular (l):</label>
+            <input type="number" id="input-l" value="3" min="0" step="1">
+        </div>
+        <div class="input-group">
+            <label for="input-m">Magnético (m):</label>
+            <input type="number" id="input-m" value="0" step="1">
+        </div>
+        <div class="input-group">
+            <label for="input-spin">Spin (m<sub>s</sub>):</label>
+            <select id="input-spin" style="width: 70px; background: #111; color: #00aaff; border: 1px solid #555; border-radius: 4px; padding: 4px; text-align: center; font-weight: bold;">
+                <option value="1">+1/2</option>
+                <option value="-1">-1/2</option>
+            </select>
+        </div>
+
+        <button id="btn-update">Simular Orbital</button>
+        
+        <p id="error-msg" style="margin-top: 15px; font-size: 14px; text-align: center; font-weight: bold;"></p>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
