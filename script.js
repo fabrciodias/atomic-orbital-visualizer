@@ -214,8 +214,33 @@ function animate(currentTime) {
 }
 
 //4. Lógica do Painel de Controle
+const panel = document.getElementById('quantum-panel');
+const btnToggle = document.getElementById('toggle-panel');
 const btnUpdate = document.getElementById('btn-update');
 const errorMsg = document.getElementById('error-msg');
+const selectM = document.getElementById('input-m');
+
+//ocultar/mostrar painel
+btnToggle.addEventListener('click', () => {
+    panel.classList.toggle('hidden');
+});
+
+//preencher o select de 'm' baseado no 'l' atual
+function updateMagOptions() {
+    const currentL = parseInt(document.getElementById('input-l').value);
+    selectM.innerHTML = '';
+
+    for (let m = -currentL; m <= currentL; m++) {
+        let option = document.createElement('option');
+        option.value = m;
+        option.text = m;
+        selectM.appendChild(option);
+    }
+
+    selectM.value = "0";
+}
+
+updateMagOptions();
 
 // Função para traduzir a física para o nome químico do orbital
 function getOrbitalName(n, l, m) {
@@ -251,44 +276,62 @@ function getOrbitalName(n, l, m) {
 errorMsg.style.color = "#00ff88";
 errorMsg.innerHTML = `Orbital Atual: ${getOrbitalName(4, 3, 0)} (Spin +1/2)`;
 
+let currentTotalParticles = totalParticles;
+
 btnUpdate.addEventListener('click', () => {
     const val_n = parseFloat(document.getElementById('input-n').value);
     const val_l = parseFloat(document.getElementById('input-l').value);
     const val_m = parseFloat(document.getElementById('input-m').value);
     const val_spin = parseFloat(document.getElementById('input-spin').value);
 
+    //o valor do slide (1 a 100) * 100.000 = de 100k a 10 milhões
+    const sliderValue = parseInt(document.getElementById('input-particles').value);
+    const requestedParticles = sliderValue * 100000;
+
     // Validações Físicas
-    if (val_n < 1) { 
+    if (val_l >= val_n) {
         errorMsg.style.color = "#ff3366";
-        errorMsg.innerHTML = "Erro: 'n' deve ser >= 1"; 
-        return; 
-    }
-    if (val_l < 0 || val_l >= val_n) { 
-        errorMsg.style.color = "#ff3366";
-        errorMsg.innerHTML = `Erro: 'l' entre 0 e ${val_n - 1}`; 
-        return; 
-    }
-    if (Math.abs(val_m) > val_l) { 
-        errorMsg.style.color = "#ff3366";
-        errorMsg.innerHTML = `Erro: 'm' entre -${val_l} e +${val_l}`; 
-        return; 
-    }
-    if (val_n > 4) { 
-        errorMsg.style.color = "#ff3366";
-        errorMsg.innerHTML = "Limite: Equações exatas até n=4 (Bloco f)."; 
-        return; 
+        errorMsg.innerHTML = `Erro: 'l' deve ser menor que 'n'. (Max: ${val_n - 1})`;
+        return;
     }
 
-    // Atualiza a GPU
-    particleUniforms.u_n.value = val_n;
-    particleUniforms.u_l.value = val_l;
-    particleUniforms.u_m.value = val_m;
-    particleUniforms.u_spin.value = val_spin;
-    
-    // Atualiza o painel
-    errorMsg.style.color = "#00ff88";
-    let spinText = val_spin > 0 ? "+1/2" : "-1/2";
-    errorMsg.innerHTML = `Orbital Atual: ${getOrbitalName(val_n, val_l, val_m)} (Spin ${spinText})`;
+    //Recosntrução da Geometria
+    //Isso é muito custoso, então só é feito se o usuário pedir uma densidade diferente
+    if (requestedParticles !== currentTotalParticles) {
+        errorMsg.style.color = "#ffaa00";
+        errorMsg.innerHTML = "Reconstruindo amostragem... Aguarde";
+
+        //pequeno delay para o navegador redenrizar a mensagem antes de travar a CPU
+        setTimeout(() => {
+            const newPositions = new Float32Array(requestedParticles * 3);
+            for (let i = 0; i < requestedParticles; i++) {
+                newPositions[i * 3] = randn_bm() * (maxDistributionRadius / 3.0);
+                newPositions[i * 3 + 1] = randn_bm() * (maxDistributionRadius / 3.0);
+                newPositions[i * 3 + 2] = randn_bm() * (maxDistributionRadius / 3.0);
+            }
+            //descarta a memória antiga e aplica a nova
+            particleGeometry.dispose();
+            particleGeometry.setAttribute('position', new THREE.BufferAttribute(newPositions, 3));
+            currentTotalParticles = requestedParticles;
+
+            //atualiza a GPU com os novos parâmetros físicos
+            applyPhysics(val_n, val_l, val_m, val_spin);
+        }, 50);
+    } else {
+        //se a densidade não mudou, só atualiza a física
+        applyPhysics(val_n, val_l, val_m, val_spin);
+    }
 });
+
+    function applyPhysics(val_n, val_l, val_m, val_spin) {
+        particleUniforms.u_n.value = val_n;
+        particleUniforms.u_l.value = val_l;
+        particleUniforms.u_m.value = val_m;
+        particleUniforms.u_spin.value = val_spin;
+
+        errorMsg.style.color = "#00ff88";
+        let spinText = val_spin > 0 ? "+1/2" : "-1/2";
+        errorMsg.innerHTML = `Orbital Atual: ${getOrbitalName(val_n, val_l, val_m)} (Spin ${spinText})`;
+    }
 
 requestAnimationFrame(animate);
