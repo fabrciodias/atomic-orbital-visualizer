@@ -1,4 +1,4 @@
-# Quantum-Volumetric-Simulator
+# Atomic Orbital Visualizer
 Simulação computacional de orbitais atômicos baseada na distribuição de probabilidade da posição do elétron, com renderização em tempo real utilizando GPU (WebGL/GLSL).
 
 # Descrição
