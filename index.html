@@ -11,26 +11,22 @@
 
     <div id="quantum-panel">
         <h3>Controle de Estado</h3>
-        
         <div class="input-group">
             <label for="input-n">Principal (n):</label>
-            <input type="range" id="input-n" value="3" min="1" max="4" step="1" oninput="document.getElementById('val-n').innerText = this.value">
-            <span id="val-n" style="width: 20px; text-align: right;">3</span>
+            <input type="range" id="input-n" value="1" min="1" max="4" step="1" oninput="document.getElementById('val-n').innerText = this.value">
+            <span id="val-n" style="width: 20px; text-align: right;">1</span>
         </div>
-        
         <div class="input-group">
             <label for="input-l">Angular (l):</label>
-            <input type="range" id="input-l" value="1" min="0" max="3" step="1" oninput="document.getElementById('val-l').innerText = this.value; updateMagneticOptions();">
-            <span id="val-l" style="width: 20px; text-align: right;">1</span>
+            <input type="range" id="input-l" value="0" min="0" max="3" step="1" oninput="document.getElementById('val-l').innerText = this.value; updateMagOptions();">
+            <span id="val-l" style="width: 20px; text-align: right;">0</span>
         </div>
-        
         <div class="input-group">
             <label for="input-m">Magnético (m):</label>
             <select id="input-m" style="width: 60px; background: #111; color: #00aaff; border: 1px solid #555; border-radius: 4px; padding: 4px; text-align: center; font-weight: bold;">
                 <option value="0">0</option>
             </select>
         </div>
-        
         <div class="input-group">
             <label for="input-spin">Spin (m<sub>s</sub>):</label>
             <select id="input-spin" style="width: 70px; background: #111; color: #00aaff; border: 1px solid #555; border-radius: 4px; padding: 4px; text-align: center; font-weight: bold;">
@@ -39,15 +35,13 @@
             </select>
         </div>
 
-        <h3 style="margin-top: 20px;">Otimização (Hardware)</h3>
+        <h3 style="margin-top: 20px;">Performance</h3>
         <div class="input-group" style="flex-direction: column; align-items: flex-start;">
-            <label for="input-particles" style="margin-bottom: 5px;">Densidade: <span id="val-particles">5.0</span> Milhões</label>
-            <input type="range" id="input-particles" value="50" min="1" max="100" step="1" style="width: 100%;" oninput="document.getElementById('val-particles').innerText = (this.value * 0.1).toFixed(1)">
-            <p style="font-size: 10px; color: #888; margin-top: 5px;">Atenção: Mudar a densidade recarregará a simulação inteira. Reduza se estiver travando.</p>
+            <label for="input-particles" style="margin-bottom: 5px;">Densidade: <span id="val-particles">0.1</span> Milhões</label>
+            <input type="range" id="input-particles" value="1" min="1" max="100" step="1" style="width: 100%;" oninput="document.getElementById('val-particles').innerText = (this.value * 0.1).toFixed(1)">
         </div>
 
         <button id="btn-update">Aplicar Física</button>
-        
         <p id="error-msg" style="margin-top: 15px; font-size: 14px; text-align: center; font-weight: bold;"></p>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
