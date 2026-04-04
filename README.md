@@ -38,7 +38,7 @@ WebGL / GLSL
 
 # Execução
 Atualmente, é possível executar por meio do link:
-https://fabrciodias.github.io/quantum-volumetric-simulator/
+[https://fabrciodias.github.io/atomic-orbital-visualizer/]
 Não há dependências externas.
 
 # Limitações
