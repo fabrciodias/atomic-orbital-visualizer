@@ -1,8 +1,10 @@
-//QUANTUM VOLUMETRIC SIMULATOR
-//OTIMIZAÇÃO (BUFFER POOLING) e GUIAS CARTESIANAS
+//QUANTUM VOLUMETRIC SIMULATOR | HYDROGEN ATOM
+//EIXOS CARTESIANOS (X, Y e Z) + CENÁRIO + CARREGAMENTO ASYNC 
 
-//1. Câmera e Cena
+//1. Câmera, Cena e Cenário
 const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x000000, 0.010);
+
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -14,6 +16,13 @@ controls.dampingFactor = 0.05;
 
 camera.position.z = 35;
 camera.position.y = 8;
+
+const gridSize = 150;
+const gridDivisions = 60;
+const gridHelper = new THREE.GridHelper(gridSize, gridDivisions, 0x00aaff, 0x111122);
+gridHelper.position.y = -20; 
+scene.add(gridHelper);
+
 
 //2. Física (Shaders)
 const vertexShader = `
@@ -98,11 +107,10 @@ const vertexShader = `
         v_spin = u_spin;
 
         gl_Position = projectionMatrix * modelViewMatrix * vec4(finalPos, 1.0);
-        //gl_PointSize = 2.0; 
+        //gl_PointSize = 2.0;
     }
 `;
 
-//Mantendo o tamanho dinâmico do ponto com base no dispositivo
 const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
 const vertexShaderFinal = vertexShader.replace("//gl_PointSize = 2.0;", `gl_PointSize = ${isMobile ? '3.5' : '2.0'};`);
 
@@ -122,72 +130,19 @@ const fragmentShader = `
     }
 `;
 
-//3. CONSTRUÇÃO DO SISTEMA OTIMIZADO (BUFFER POOLING)
-const MAX_PARTICLES = 10000000;
-const particleGeometry = new THREE.BufferGeometry();
-const particlePositions = new Float32Array(MAX_PARTICLES * 3);
-
-function randn_bm() {
-    let u = 0, v = 0;
-    while(u === 0) u = Math.random();
-    while(v === 0) v = Math.random();
-    return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
-}
-
-const maxDistributionRadius = 35.0; 
-for (let i = 0; i < MAX_PARTICLES; i++) {
-    particlePositions[i * 3] = randn_bm() * (maxDistributionRadius / 3.0); 
-    particlePositions[i * 3 + 1] = randn_bm() * (maxDistributionRadius / 3.0); 
-    particlePositions[i * 3 + 2] = randn_bm() * (maxDistributionRadius / 3.0); 
-}
-
-particleGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
-
-//Renderiza apenas uma fração inicial (ex: 100k) para carga rápida
-let currentDrawCount = 100000;
-particleGeometry.setDrawRange(0, currentDrawCount);
-
-const particleUniforms = {
-    u_time: { value: 0.0 },
-    u_n: { value: 1.0 },
-    u_l: { value: 0.0 },
-    u_m: { value: 0.0 },
-    u_spin: { value: 1.0 }
-};
-
-const particleMaterial = new THREE.ShaderMaterial({
-    vertexShader: vertexShaderFinal,
-    fragmentShader: fragmentShader,
-    uniforms: particleUniforms,
-    transparent: true,
-    blending: THREE.AdditiveBlending,
-    depthWrite: false,
-    depthTest: false
-});
-
-const particles = new THREE.Points(particleGeometry, particleMaterial);
-particles.frustumCulled = false;
-
-//Crinado grupo do átomo
+//3. CONSTRUÇÃO E ESTRUTURA DO ÁTOMO
 const atomGroup = new THREE.Group();
 scene.add(atomGroup);
 
-atomGroup.add(particles);
-
-//nucleo simbolico
 const nucleusMaterial = new THREE.MeshBasicMaterial({ color: 0xff00ff });
 const nucleus = new THREE.Mesh(new THREE.SphereGeometry(0.15, 32, 32), nucleusMaterial);
 atomGroup.add(nucleus);
 
-//GUIAS CARTESIANAS (Eixos Simétricos com Letras)
-const axisLength = 20.0; //O tamanho que você escolheu
-
-//Materiais com as cores padrão (RGB = XYZ)
+const axisLength = 20.0; 
 const matX = new THREE.LineBasicMaterial({ color: 0xff4444, transparent: true, opacity: 0.6 });
 const matY = new THREE.LineBasicMaterial({ color: 0x44ff44, transparent: true, opacity: 0.6 });
 const matZ = new THREE.LineBasicMaterial({ color: 0x4488ff, transparent: true, opacity: 0.6 });
 
-//Criando as linhas cruzando do negativo ao positivo
 const geoX = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-axisLength, 0, 0), new THREE.Vector3(axisLength, 0, 0)]);
 const geoY = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, -axisLength, 0), new THREE.Vector3(0, axisLength, 0)]);
 const geoZ = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, -axisLength), new THREE.Vector3(0, 0, axisLength)]);
@@ -196,7 +151,6 @@ atomGroup.add(new THREE.Line(geoX, matX));
 atomGroup.add(new THREE.Line(geoY, matY));
 atomGroup.add(new THREE.Line(geoZ, matZ));
 
-//Função para criar Letras (Sprites 2D renderizados no 3D)
 function createTextSprite(text, color) {
     const canvas = document.createElement('canvas');
     canvas.width = 128;
@@ -210,42 +164,96 @@ function createTextSprite(text, color) {
     ctx.fillText(text, 64, 64);
     
     const texture = new THREE.CanvasTexture(canvas);
-    //depthTest: false garante que a letra sempre apareça por cima da nuvem quântica
     const spriteMat = new THREE.SpriteMaterial({ map: texture, depthTest: false, transparent: true });
     const sprite = new THREE.Sprite(spriteMat);
-    sprite.scale.set(3, 3, 1); //Tamanho da letra no espaço 3D
+    sprite.scale.set(3, 3, 1); 
     return sprite;
 }
 
-//Adicionando as letras nas pontas (um pouco além da linha, posição 22)
 const labelOffset = axisLength + 2.0;
+const labelX = createTextSprite("X", "#ff4444"); labelX.position.set(labelOffset, 0, 0); atomGroup.add(labelX);
+const labelMinusX = createTextSprite("-X", "#aa3333"); labelMinusX.position.set(-labelOffset, 0, 0); atomGroup.add(labelMinusX);
+const labelY = createTextSprite("Y", "#44ff44"); labelY.position.set(0, labelOffset, 0); atomGroup.add(labelY);
+const labelMinusY = createTextSprite("-Y", "#33aa33"); labelMinusY.position.set(0, -labelOffset, 0); atomGroup.add(labelMinusY);
+const labelZ = createTextSprite("Z", "#4488ff"); labelZ.position.set(0, 0, labelOffset); atomGroup.add(labelZ);
+const labelMinusZ = createTextSprite("-Z", "#3355aa"); labelMinusZ.position.set(0, 0, -labelOffset); atomGroup.add(labelMinusZ);
 
-//Eixo X (Vermelho)
-const labelX = createTextSprite("X", "#ff4444");
-labelX.position.set(labelOffset, 0, 0);
-atomGroup.add(labelX);
 
-const labelMinusX = createTextSprite("-X", "#aa3333"); //Cor mais escura pro negativo
-labelMinusX.position.set(-labelOffset, 0, 0);
-atomGroup.add(labelMinusX);
+//4. OTIMIZAÇÃO: CARREGAMENTO ASYNC
+const MAX_PARTICLES = 10000000;
+const particleGeometry = new THREE.BufferGeometry();
+const particlePositions = new Float32Array(MAX_PARTICLES * 3);
 
-//Eixo Y (Verde)
-const labelY = createTextSprite("Y", "#44ff44");
-labelY.position.set(0, labelOffset, 0);
-atomGroup.add(labelY);
+function randn_bm() {
+    let u = 0, v = 0;
+    while(u === 0) u = Math.random();
+    while(v === 0) v = Math.random();
+    return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+}
 
-const labelMinusY = createTextSprite("-Y", "#33aa33");
-labelMinusY.position.set(0, -labelOffset, 0);
-atomGroup.add(labelMinusY);
+const maxDistributionRadius = 35.0; 
+let currentIndex = 0;
+const chunkSize = 250000; 
 
-//Eixo Z (Azul)
-const labelZ = createTextSprite("Z", "#4488ff");
-labelZ.position.set(0, 0, labelOffset);
-atomGroup.add(labelZ);
+const loadingBar = document.getElementById('loading-bar');
+const loadingText = document.getElementById('loading-text');
+const loadingScreen = document.getElementById('loading-screen');
 
-const labelMinusZ = createTextSprite("-Z", "#3355aa");
-labelMinusZ.position.set(0, 0, -labelOffset);
-atomGroup.add(labelMinusZ);
+function generateParticlesAsync() {
+    const target = Math.min(currentIndex + chunkSize, MAX_PARTICLES);
+    
+    for (let i = currentIndex; i < target; i++) {
+        particlePositions[i * 3] = randn_bm() * (maxDistributionRadius / 3.0); 
+        particlePositions[i * 3 + 1] = randn_bm() * (maxDistributionRadius / 3.0); 
+        particlePositions[i * 3 + 2] = randn_bm() * (maxDistributionRadius / 3.0); 
+    }
+    
+    currentIndex = target;
+    const progress = Math.round((currentIndex / MAX_PARTICLES) * 100);
+    
+    loadingBar.style.width = `${progress}%`;
+    loadingText.innerText = `${progress}% (${currentIndex.toLocaleString()} partículas)`;
+
+    if (currentIndex < MAX_PARTICLES) {
+        requestAnimationFrame(generateParticlesAsync);
+    } else {
+        finishLoadingAndStart();
+    }
+}
+
+let particles;
+let currentDrawCount = 100000;
+const particleUniforms = {
+    u_time: { value: 0.0 },
+    u_n: { value: 1.0 },
+    u_l: { value: 0.0 },
+    u_m: { value: 0.0 },
+    u_spin: { value: 1.0 }
+};
+
+function finishLoadingAndStart() {
+    loadingScreen.style.opacity = '0';
+    setTimeout(() => loadingScreen.style.display = 'none', 500);
+
+    particleGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+    particleGeometry.setDrawRange(0, currentDrawCount);
+
+    const particleMaterial = new THREE.ShaderMaterial({
+        vertexShader: vertexShaderFinal,
+        fragmentShader: fragmentShader,
+        uniforms: particleUniforms,
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        depthTest: false
+    });
+
+    particles = new THREE.Points(particleGeometry, particleMaterial);
+    particles.frustumCulled = false;
+    atomGroup.add(particles);
+
+    requestAnimationFrame(animate);
+}
 
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
@@ -253,7 +261,7 @@ window.addEventListener('resize', () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-//4. ENGINE DE ANIMAÇÃO COM FPS ADAPTATIVO
+//5. ENGINE DE ANIMAÇÃO COM FPS ADAPTATIVO
 const clock = new THREE.Clock();
 let lastFrameTime = performance.now();
 let frameDropsCount = 0;
@@ -264,8 +272,7 @@ function animate(currentTime) {
     const deltaTime = currentTime - lastFrameTime;
     lastFrameTime = currentTime;
 
-    //Monitor de Performance (Thermal Throttling dinâmico)
-    if (deltaTime > 45) { //Caiu de ~22 FPS
+    if (deltaTime > 45) { 
         frameDropsCount++;
         if (frameDropsCount > 10 && currentDrawCount > 100000) {
             currentDrawCount = Math.max(100000, currentDrawCount - 200000); 
@@ -288,7 +295,7 @@ function animate(currentTime) {
     renderer.render(scene, camera);
 }
 
-//5. LÓGICA DO PAINEL E CONTROLES
+//6. LÓGICA DO PAINEL E CONTROLES
 const panel = document.getElementById('quantum-panel');
 const btnToggle = document.getElementById('toggle-panel');
 const btnUpdate = document.getElementById('btn-update');
@@ -308,7 +315,6 @@ window.updateMagOptions = function() {
         option.text = m;
         selectM.appendChild(option);
     }
-    //Tenta manter no 0 se ele existir na faixa
     selectM.value = "0";
 };
 
@@ -341,7 +347,7 @@ function getOrbitalName(n, l, m) {
 
 errorMsg.style.color = "#00ff88";
 errorMsg.innerHTML = `Orbital Atual: 1s (Spin +1/2)`;
-updateMagOptions(); //Popula o select na primeira carga
+updateMagOptions(); 
 
 btnUpdate.addEventListener('click', () => {
     const val_n = parseFloat(document.getElementById('input-n').value);
@@ -358,7 +364,6 @@ btnUpdate.addEventListener('click', () => {
         return;
     }
 
-    //Muda o ponteiro da GPU
     if (requestedParticles !== currentDrawCount) {
         currentDrawCount = requestedParticles;
         particleGeometry.setDrawRange(0, currentDrawCount);
@@ -374,4 +379,5 @@ btnUpdate.addEventListener('click', () => {
     errorMsg.innerHTML = `Orbital Atual: ${getOrbitalName(val_n, val_l, val_m)} (Spin ${spinText})`;
 });
 
-requestAnimationFrame(animate);
+//Inicia o Loop
+generateParticlesAsync();
