@@ -304,7 +304,7 @@ btnVid.addEventListener('click', () => {
         mediaRecorder.stop();
     } else {
         recordedChunks = [];
-        const stream = renderer.domElement.captureStream(30);
+        const stream = renderer.domElement.captureStream(60);
         mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
         
         mediaRecorder.ondataavailable = e => {
