@@ -1,5 +1,7 @@
 // MOTOR GRÁFICO
 const vertexShader = /* glsl */`
+    precision mediump float;
+
     uniform float u_time;
     uniform float u_n; 
     uniform float u_l; 
@@ -10,7 +12,8 @@ const vertexShader = /* glsl */`
     uniform float u_l2;
     uniform float u_m2;
     uniform float u_transition; 
-    uniform float u_excitation; // O pico de energia da transição
+    uniform float u_excitation;
+    uniform float u_pointSize;
 
     varying float v_opacity;
     varying float v_spin; 
@@ -112,11 +115,13 @@ const vertexShader = /* glsl */`
         v_spin = u_spin;
 
         gl_Position = projectionMatrix * modelViewMatrix * vec4(finalPos, 1.0);
-        //gl_PointSize = 2.0;
+        gl_PointSize = u_pointSize;
     }
 `;
 
 const fragmentShader = /* glsl */`
+    precision mediump float;
+
     varying float v_opacity;
     varying float v_spin; 
     

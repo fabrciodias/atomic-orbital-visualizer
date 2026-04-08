@@ -7,6 +7,7 @@ scene.fog = new THREE.FogExp2(0x000000, 0.015);
 
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
@@ -15,7 +16,7 @@ controls.enableDamping = true;
 controls.dampingFactor = 0.05;
 
 controls.minDistance = 15;
-controls.maxDistance = 200;
+controls.maxDistance = 150;
 controls.enablePan = false;
 
 camera.position.z = 35;
@@ -78,9 +79,10 @@ const labelMinusZ = createTextSprite("-Z", "#3355aa"); labelMinusZ.position.set(
 
 
 //3. OTIMIZAÇÃO: CARREGAMENTO ASYNC
+const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
 const MAX_PARTICLES = 10000000;
 const particleGeometry = new THREE.BufferGeometry();
-const maxDistributionRadius = 35.0;
+const maxDistributionRadius = isMobile ? 25.0 : 35.0;
 
 const loadingBar = document.getElementById('loading-bar');
 const loadingText = document.getElementById('loading-text');
@@ -115,6 +117,7 @@ worker.postMessage({
 let particles;
 let targetStarkE = 0.0;
 let currentDrawCount = 100000;
+let currentPixelRatio = Math.min(window.devicePixelRatio, 2.0);
 const particleUniforms = {
     u_time: { value: 0.0 },
     u_n: { value: 1.0 },
@@ -126,8 +129,16 @@ const particleUniforms = {
     u_spin: { value: 1.0 },
     u_starkE: { value: 0.0},
     u_transition: { value: 0.0 },
-    u_excitation: { value: 0.0 }
+    u_excitation: { value: 0.0 },
+    u_pointSize: { value: 2.0 }
 };
+
+function applyOptimizations() {
+    let densityRatio = currentDrawCount / MAX_PARTICLES;
+    let baseSize = isMobile ? 3.5 : 2.0;
+    let newSize = baseSize - (densityRatio * (isMobile ? 2.5 : 1.0));
+    particleUniforms.u_pointSize.value + Math.max(0.5, newSize);
+}
 
 function finishLoadingAndStart() {
     loadingScreen.style.opacity = '0';
@@ -135,11 +146,8 @@ function finishLoadingAndStart() {
 
     particleGeometry.setDrawRange(0, currentDrawCount);
 
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
-    const vertexShaderFinal = vertexShader.replace("//gl_PointSize = 2.0;", `gl_PointSize = ${isMobile ? '3.5' : '2.0'};`);
-
     const particleMaterial = new THREE.ShaderMaterial({
-        vertexShader: vertexShaderFinal,
+        vertexShader: vertexShader,
         fragmentShader: fragmentShader,
         uniforms: particleUniforms,
         transparent: true,
@@ -151,6 +159,9 @@ function finishLoadingAndStart() {
     particles = new THREE.Points(particleGeometry, particleMaterial);
     particles.frustumCulled = false;
     atomGroup.add(particles);
+
+    applyOptimizations();
+    renderer.setPixelRatio(currentPixelRatio);
 
     //TRAVA DE SINC DA UI
     const slider = document.getElementById('input-particles');
@@ -174,6 +185,9 @@ let isTransitioning = false;
 let transitionProgress = 0.0;
 const transitionDuration = 2.0;
 
+function cleanupMemory() {
+    renderer.renderLists.dispose();
+}
 
 function animate(currentTime) {
     requestAnimationFrame(animate);
@@ -209,24 +223,42 @@ function animate(currentTime) {
         }
     }
 
-    if (deltaTime > 60) { 
+    if (deltaTime > 45) { 
         frameDropsCount++;
-        if (frameDropsCount > 30 && currentDrawCount > 100000) {
-            currentDrawCount = Math.max(100000, currentDrawCount - 100000); 
-            particleGeometry.setDrawRange(0, currentDrawCount);
-            
-            const slider = document.getElementById('input-particles');
-            slider.value = currentDrawCount / 100000;
-            document.getElementById('val-particles').innerText = (slider.value * 0.1).toFixed(1);
-            
-            frameDropsCount = -60; 
-            console.warn(`Lag detectado: Densidade reduzida para ${(currentDrawCount/100000).toFixed(1)}M para estabilizar.`);
+
+        if (frameDropsCount > 12) {
+            //Primeira defesa: ficar um pouco mais embaçado (pixel ratio)
+            if (currentPixelRatio > 0.5) {
+                currentPixelRatio -= 0.25;
+                renderer.setPixelRatio(currentPixelRatio);
+                frameDropsCount = -15;
+                console.warn(`Lag: Resolução de renderização reduzida para ${currentPixelRatio}`);
+            }
+            // Segunda defesa: expulsar partículas
+            else if (currentDrawCount > 100000) {
+                currentDrawCount = Math.max(100000, currentDrawCount - 200000);
+                particleGeometry.setDrawRange(0, currentDrawCount);
+                cleanupMemory();
+
+                const slider = document.getElementById('input-particles');
+                slider.value = currentDrawCount / 100000;
+                document.getElementById('val-particles').innerText = (slider.value * 0.1).toFixed(1);
+
+                frameDropsCount = -60;
+                console.warn(`Lag: Densidade reduzida par ${(currentDrawCount/100000).toFixed(1)}M`);
+            }
+            applyOptimizations();
         }
     } else {
-        frameDropsCount = Math.max(0, frameDropsCount - 2); 
+        frameDropsCount = Math.max(0, frameDropsCount - 5); 
     }
 
-    particleUniforms.u_time.value = clock.getElapsedTime();
+    const frameTime = Math.min(deltaTime / 1000, 1/30);
+    const lerpFactor = 1.0  - Math.pow(0.001, frameTime)
+    particleUniforms.u_time.value += frameTime;
+    particleUniforms.u_spin.value = val_spin;
+    particleUniforms.u_starkE.value += (targetStarkE - particleUniforms.u_starkE.value) * lerpFactor;
+
     atomGroup.rotation.y += 0.003; 
     controls.update();
     renderer.render(scene, camera);
@@ -319,12 +351,9 @@ btnUpdate.addEventListener('click', () => {
         currentDrawCount = requestedParticles;
         particleGeometry.setDrawRange(0, currentDrawCount);
     }
+    applyOptimizations();
 
-    // Passa todos os dados atualizados para a Placa de Vídeo
-    // Define o Campo Elétrico e o Spin imediatamente
-    particleUniforms.u_spin.value = val_spin;
-    particleUniforms.u_starkE.value = val_stark;
-
+    
     // Se a física nova for diferente da atual, iniciamos o balé quântico!
     if (particleUniforms.u_n.value !== val_n || 
         particleUniforms.u_l.value !== val_l || 

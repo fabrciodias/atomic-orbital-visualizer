@@ -1,0 +1,16 @@
+{
+  "name": "Orbital Visualizer",
+  "short_name": "Orbital",
+  "description": "Simulador Quântico Volumétrico",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#00aaff",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

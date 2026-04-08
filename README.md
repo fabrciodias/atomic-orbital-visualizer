@@ -1,56 +1,27 @@
-# Atomic Orbital Visualizer
-Simulação computacional de orbitais atômicos baseada na distribuição de probabilidade da posição do elétron, com renderização em tempo real utilizando GPU (WebGL/GLSL).
+# Quantum Volumetric Simulator: Hydrogen
 
-# Descrição
-Este projeto tem como objetivo representar visualmente orbitais atômicos a partir do modelo probabilístico da mecânica quântica.
-Diferente da abordagem clássica de órbitas bem definidas, a simulação constrói uma nuvem de densidade eletrônica, onde cada ponto representa uma possível posição do elétron no espaço.
-A distribuição das partículas busca reproduzir qualitativamente a forma dos orbitais.
+Simulador de densidade de probabilidade para os orbitais do átomo de hidrogênio. O projeto utiliza computação gráfica para traduzir a função de onda eletrônica em uma nuvem de pontos volumétrica em tempo real.
 
-# Funcionamento
-As partículas são geradas com base em distribuições associadas aos orbitais atômicos
-Cada ponto representa uma amostra da função densidade de probabilidade
-O sistema trabalha com grandes volumes de dados (de 100 mil até 10 milhões partículas)
-A renderização é realizada via WebGL, com processamento paralelo na GPU por meio de shaders (GLSL). 
+## Proposta
+A visualização de orbitais atômicos é frequentemente limitada a representações estáticas ou superfícies de contorno (isosuperfícies) que escondem a natureza probabilística do elétron. Este simulador utiliza a equação de Schrödinger para mapear densidades reais, permitindo a observação da estrutura interna dos orbitais e o efeito de perturbações externas, como o campo elétrico (Efeito Stark).
 
-# Interação
-A interface permite:
-Seleção de orbitais (s, p, d, f)
-Ajuste dos números quânticos:
-Principal (n)
-Azimutal (l)
-Magnético (m)
-Spin
-Controle da quantidade de partículas.
+## Funcionalidades Técnicas
+* **Visualização Volumétrica:** Renderização de até 5 milhões de partículas processadas via Web Workers.
+* **Dinâmica Quântica:** Transições suaves (superposição) entre diferentes estados orbitais ($n, l, m$).
+* **Efeito Stark:** Simulação de perturbação por campo elétrico externo ($E_z$).
+* **Motor Gráfico:** Implementação em GLSL (Shaders) para execução direta na GPU, garantindo performance em dispositivos móveis.
+* **PWA (Progressive Web App):** Suporte para instalação e funcionamento completo em ambiente offline.
 
-# Performance
-O projeto foi estruturado com foco em eficiência computacional:
-Uso de WebGL para paralelização massiva na GPU
-Redução de carga na CPU
-Atualização sincronizada com _requestAnimationFrame_
-Separação entre geração de dados e renderização
-O desempenho depende diretamente da capacidade da GPU do dispositivo.
+## Parâmetros Configuráveis
+1. **Número Quântico Principal ($n$):** Define o nível de energia e a extensão radial.
+2. **Número Quântico Azimutal ($l$):** Determina a forma geométrica do orbital.
+3. **Número Quântico Magnético ($m$):** Controla a orientação espacial.
+4. **Spin ($m_s$):** Representação do momento angular intrínseco através de diferenciação cromática.
 
-# Tecnologias
-HTML5
-CSS3
-JavaScript (Vanilla)
-WebGL / GLSL
+## Tecnologias Utilizadas
+* **Three.js:** Manipulação da cena 3D e câmeras.
+* **GLSL:** Shaders personalizados para o cálculo da densidade de probabilidade.
+* **JavaScript (ES6+):** Lógica de controle e processamento paralelo.
 
-# Execução
-Atualmente, é possível executar por meio do link:
-[https://fabrciodias.github.io/atomic-orbital-visualizer/]
-Não há dependências externas.
-
-# Limitações
-A simulação é qualitativa e não resolve numericamente a equação de Schrödinger
-Dependência de suporte a WebGL no navegador
-Limitações associadas ao desempenho da GPU.
-
-# Possíveis extensões
-Paralelização da geração de dados via Web Workers
-Exportação de dados (JSON, CSV) e imagens da simulação
-Implementação de novos modelos e refinamentos físicos
-Otimizações adicionais de renderização.
-
-# Referência conceitual
-Baseado no modelo quântico de distribuição de probabilidade eletrônica em átomos.
+## Uso
+O simulador pode ser acessado diretamente pelo navegador. Para capturas acadêmicas, as ferramentas de exportação permitem salvar o estado atual em alta resolução ou gravar sequências de transição.
