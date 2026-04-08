@@ -7,12 +7,15 @@
 body {
     overflow: hidden;
     background-color: #000000;
+    overscroll-behavior: none;
+    touch-action: none;
 }
 
 canvas {
     display: block;
     width: 100vw;
-    height: 100vh;
+    height: 100dvh;
+    touch-action: none;
 }
 
 /* TELA DE CARREGAMENTO */
@@ -193,6 +196,107 @@ input[type=range]::-webkit-slider-runnable-track {
 
 #stark-hud input {
     flex-grow: 1;
+}
+
+/* --- BOTÕES SUPERIORES E EXPORTAÇÃO --- */
+.top-btn {
+    position: absolute;
+    top: 20px;
+    z-index: 1000;
+    background: rgba(10, 10, 15, 0.85);
+    color: #00aaff;
+    border: 1px solid #00aaff;
+    padding: 10px 15px;
+    border-radius: 8px;
+    font-weight: bold;
+    font-family: monospace;
+    cursor: pointer;
+    transition: 0.3s;
+    box-shadow: 0 4px 15px rgba(0, 170, 255, 0.1);
+}
+
+.top-btn:hover {
+    background: #00aaff;
+    color: #000;
+    box-shadow: 0 4px 15px rgba(0, 170, 255, 0.4);
+}
+
+.export-btn {
+    flex: 1;
+    background: #111;
+    color: #00aaff;
+    border: 1px solid #555;
+    padding: 8px;
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 12px;
+    transition: 0.2s;
+}
+
+.export-btn:hover {
+    background: #222;
+    border-color: #00aaff;
+}
+
+.export-btn.recording {
+    background: #ff3366;
+    color: #fff;
+    border-color: #ff3366;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+/* --- MODAL EDUCACIONAL --- */
+#help-modal {
+    position: absolute;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 2000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: opacity 0.3s ease;
+}
+
+#help-modal.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+#close-help {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    cursor: pointer;
+    font-size: 28px;
+    color: #ff3366;
+    padding: 10px;
+    line-height: 1;
+    z-index: 10;
+}
+
+.modal-content {
+    position: relative;
+    background: rgba(15, 15, 20, 0.95);
+    border: 1px solid #00aaff;
+    border-radius: 12px;
+    padding: 25px;
+    width: 90%;
+    max-width: 450px;
+    color: #ddd;
+    font-family: monospace;
+    font-size: 14px;
+    box-shadow: 0 0 30px rgba(0, 170, 255, 0.2);
+}
+
+.modal-content p {
+    margin-bottom: 8px;
+    line-height: 1.4;
 }
 
 @media (max-width: 768px) {
