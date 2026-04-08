@@ -15,12 +15,12 @@ canvas {
     height: 100vh;
 }
 
-/* --- TELA DE CARREGAMENTO --- */
+/* TELA DE CARREGAMENTO */
 #loading-screen {
     position: absolute;
     top: 0;
     left: 0;
-    width: 100vw;
+    width: 110vw;
     height: 100vh;
     background: #050505;
     z-index: 2000;
@@ -50,36 +50,39 @@ canvas {
     box-shadow: 0 0 10px #00ff88;
 }
 
-/* --- PAINEL QUÂNTICO --- */
+/* PAINEL QUÂNTICO */
+/* --- PAINEL QUÂNTICO (Dashboard Inferior com Estética Original) --- */
 #quantum-panel {
     position: absolute;
-    top: 20px;
-    left: 20px;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%);
     background: rgba(10, 10, 15, 0.85);
     border: 1px solid #00aaff;
-    border-radius: 8px;
-    padding: 20px;
+    border-radius: 12px;
+    padding: 20px 30px;
     color: #fff;
     font-family: monospace;
     z-index: 100;
-    width: 320px;
+    width: 90%;
+    max-width: 800px;
+    display: flex;
+    justify-content: space-between;
+    gap: 40px;
     box-shadow: 0 0 15px rgba(0, 170, 255, 0.2);
-    transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
-    transform-origin: top left;
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease;
 }
 
 #quantum-panel.hidden {
-    transform: scale(0);
+    transform: translate(-50%, 150%); 
     opacity: 0;
     pointer-events: none;
 }
 
-#quantum-panel h3 {
-    margin-bottom: 15px;
-    color: #00aaff;
-    text-align: center;
-    border-bottom: 1px solid #333;
-    padding-bottom: 10px;
+.panel-column {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
 }
 
 .input-group {
@@ -89,11 +92,9 @@ canvas {
     margin-bottom: 12px;
 }
 
-/* Sliders Otimizados */
 input[type=range] {
     -webkit-appearance: none; 
     appearance: none;
-    width: 60%; 
     background: transparent; 
 }
 input[type=range]::-webkit-slider-thumb {
@@ -114,27 +115,103 @@ input[type=range]::-webkit-slider-runnable-track {
     border-radius: 2px;
 }
 
-button {
+#btn-update {
     width: 100%;
     background: #00aaff;
     color: #000;
     border: none;
-    padding: 10px;
+    padding: 12px;
     margin-top: 10px;
     cursor: pointer;
     font-weight: bold;
     border-radius: 4px;
     transition: 0.2s;
+    font-size: 14px;
 }
 
-button:hover {
+#btn-update:hover {
     background: #0088cc;
+    box-sizing: 0 0 10px #00aaff;
+}
+
+#toggle-panel {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    background: rgba(10, 10, 15, 0.85);
+    color: #00aaff;
+    border: 1px solid #00aaff;
+    padding: 10px 15px;
+    border-radius: 8px;
+    font-weight: bold;
+    font-family: monospace;
+    cursor: pointer;
+    transition: 0.3s;
+    box-shadow: 0 4px 15px rgba(0, 170, 255, 0.1);
+}
+
+#toggle-panel:hover {
+    background: #00aaff;
+    color: #000;
+    box-shadow: 0 4px 15px rgba(0, 170, 255, 0.4);
 }
 
 #error-msg {
-    color: #ff3366;
+    color: #00ff88;
     font-size: 12px;
     margin-top: 10px;
     text-align: center;
     min-height: 15px;
+}
+
+#stark-hud {
+    position: absolute;
+    bottom: 25px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(10, 10, 15, 0.85);
+    border: 1px solid #00aaff;
+    border-radius: 40px;
+    padding: 12px 25px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    z-index: 50;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: 0 5px 20px rgba(0, 170, 255, 0.1);
+    font-family: monospace;
+    color: #fff;
+}
+
+#stark-hud label {
+    font-weight: bold;
+    color: #00aaff;
+    white-space: nowrap;
+}
+
+#stark-hud input {
+    flex-grow: 1;
+}
+
+@media (max-width: 768px) {
+    #quantum-panel {
+        flex-direction: column;
+        gap: 10px;
+        bottom: 85px;
+        width: 95%;
+        padding: 15px;
+        max-height: 85vh;
+        overflow-y: auto;
+    }
+    #quantum-panel.hidden {
+        transform: translate(-50%, 120%);
+    }
+
+    #stark-hud {
+        bottom: 10px;
+        padding: 10px 15px;
+        width: 95%;
+    }
 }

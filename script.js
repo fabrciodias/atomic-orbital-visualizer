@@ -3,7 +3,7 @@
 
 //1. Câmera, Cena e Cenário
 const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0x000000, 0.010);
+scene.fog = new THREE.FogExp2(0x000000, 0.015);
 
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -17,120 +17,14 @@ controls.dampingFactor = 0.05;
 camera.position.z = 35;
 camera.position.y = 8;
 
-const gridSize = 150;
-const gridDivisions = 60;
+const gridSize = 500;
+const gridDivisions = 100;
 const gridHelper = new THREE.GridHelper(gridSize, gridDivisions, 0x00aaff, 0x111122);
 gridHelper.position.y = -20; 
 scene.add(gridHelper);
 
 
-//2. Física (Shaders)
-const vertexShader = `
-    uniform float u_time;
-    uniform float u_n; 
-    uniform float u_l; 
-    uniform float u_m; 
-    uniform float u_spin;
-
-    varying float v_opacity;
-    varying float v_spin; 
-
-    #define PI 3.1415926535897932384626433832795
-
-    float SphericalHarmonic(float l, float m, vec3 pos, float r) {
-        if (r < 0.0001) return 0.0;
-        if (l == 0.0) return sqrt(1.0 / (4.0 * PI));
-
-        if (l == 1.0) {
-            if (m == 0.0) return sqrt(3.0 / (4.0 * PI)) * (pos.z / r); 
-            if (m == 1.0) return sqrt(3.0 / (4.0 * PI)) * (pos.x / r); 
-            if (m == -1.0) return sqrt(3.0 / (4.0 * PI)) * (pos.y / r); 
-        }
-
-        if (l == 2.0) {
-            if (m == 0.0) return sqrt(5.0 / (16.0 * PI)) * (3.0 * (pos.z * pos.z / (r * r)) - 1.0); 
-            if (m == 1.0) return sqrt(15.0 / (4.0 * PI)) * (pos.x * pos.z / (r * r)); 
-            if (m == -1.0) return sqrt(15.0 / (4.0 * PI)) * (pos.y * pos.z / (r * r)); 
-            if (m == 2.0) return sqrt(15.0 / (16.0 * PI)) * ((pos.x * pos.x - pos.y * pos.y) / (r * r)); 
-            if (m == -2.0) return sqrt(15.0 / (4.0 * PI)) * (pos.x * pos.y / (r * r)); 
-        }
-
-        if (l == 3.0) {
-            float z2 = pos.z * pos.z;
-            float r2 = r * r;
-            float x2y2 = pos.x * pos.x - pos.y * pos.y;
-
-            if (m == 0.0) return sqrt(7.0 / (16.0 * PI)) * (pos.z / r) * (5.0 * (z2 / r2) - 3.0); 
-            if (m == 1.0) return sqrt(21.0 / (32.0 * PI)) * (pos.x / r) * (5.0 * (z2 / r2) - 1.0); 
-            if (m == -1.0) return sqrt(21.0 / (32.0 * PI)) * (pos.y / r) * (5.0 * (z2 / r2) - 1.0); 
-            if (m == 2.0) return sqrt(105.0 / (16.0 * PI)) * (pos.z / r) * (x2y2 / r2); 
-            if (m == -2.0) return sqrt(105.0 / (4.0 * PI)) * (pos.x * pos.y * pos.z) / (r * r * r); 
-            if (m == 3.0) return sqrt(35.0 / (32.0 * PI)) * (pos.x / r) * ((pos.x * pos.x - 3.0 * pos.y * pos.y) / r2); 
-            if (m == -3.0) return sqrt(35.0 / (32.0 * PI)) * (pos.y / r) * ((3.0 * pos.x * pos.x - pos.y * pos.y) / r2); 
-        }
-        return 0.0;
-    }
-
-    float RadialWaveFunction(float n, float l, float r) {
-        if (n == 1.0 && l == 0.0) return 2.0 * exp(-r); 
-        
-        if (n == 2.0) {
-            if (l == 0.0) return (1.0 / sqrt(2.0)) * (1.0 - 0.5 * r) * exp(-0.5 * r); 
-            if (l == 1.0) return (1.0 / sqrt(24.0)) * r * exp(-0.5 * r); 
-        }
-        if (n == 3.0) {
-            if (l == 0.0) return (2.0 / (81.0 * sqrt(3.0))) * (27.0 - 18.0 * r + 2.0 * r * r) * exp(-r / 3.0); 
-            if (l == 1.0) return (4.0 / (81.0 * sqrt(6.0))) * (6.0 - r) * r * exp(-r / 3.0); 
-            if (l == 2.0) return (4.0 / (81.0 * sqrt(30.0))) * (r * r) * exp(-r / 3.0); 
-        }
-        if (n == 4.0) {
-            float r2 = r * r;
-            float r3 = r2 * r;
-            if (l == 0.0) return (1.0 / 4.0) * (1.0 - (3.0/4.0)*r + (1.0/8.0)*r2 - (1.0/192.0)*r3) * exp(-r / 4.0); 
-            if (l == 1.0) return (sqrt(5.0) / (16.0 * sqrt(3.0))) * r * (1.0 - (1.0/4.0)*r + (1.0/80.0)*r2) * exp(-r / 4.0); 
-            if (l == 2.0) return (1.0 / (64.0 * sqrt(5.0))) * r2 * (1.0 - (1.0/12.0)*r) * exp(-r / 4.0); 
-            if (l == 3.0) return (1.0 / (768.0 * sqrt(35.0))) * r3 * exp(-r / 4.0); 
-        }
-        return 0.0;
-    }
-
-    void main() {
-        vec3 finalPos = position;
-        float r = length(finalPos);
-
-        float R = RadialWaveFunction(u_n, u_l, r);
-        float Y = SphericalHarmonic(u_l, u_m, finalPos, r);
-
-        float probDensity = (R * R) * (Y * Y);
-        float exposure = 100.0 * pow(u_n, 1.5);
-        v_opacity = probDensity * exposure;
-        v_spin = u_spin;
-
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(finalPos, 1.0);
-        //gl_PointSize = 2.0;
-    }
-`;
-
-const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
-const vertexShaderFinal = vertexShader.replace("//gl_PointSize = 2.0;", `gl_PointSize = ${isMobile ? '3.5' : '2.0'};`);
-
-const fragmentShader = `
-    varying float v_opacity;
-    varying float v_spin; 
-    
-    void main() {
-        if (v_opacity < 0.001) discard;
-
-        vec3 baseColor = (v_spin > 0.0) ? vec3(0.1, 0.6, 1.0) : vec3(1.0, 0.7, 0.2);
-        vec3 coreColor = vec3(1.0, 1.0, 1.0);
-        
-        vec3 finalColor = mix(baseColor, coreColor, clamp(v_opacity - 1.0, 0.0, 1.0));
-
-        gl_FragColor = vec4(finalColor, min(v_opacity, 1.0));
-    }
-`;
-
-//3. CONSTRUÇÃO E ESTRUTURA DO ÁTOMO
+//2. CONSTRUÇÃO E ESTRUTURA DO ÁTOMO
 const atomGroup = new THREE.Group();
 scene.add(atomGroup);
 
@@ -179,64 +73,66 @@ const labelZ = createTextSprite("Z", "#4488ff"); labelZ.position.set(0, 0, label
 const labelMinusZ = createTextSprite("-Z", "#3355aa"); labelMinusZ.position.set(0, 0, -labelOffset); atomGroup.add(labelMinusZ);
 
 
-//4. OTIMIZAÇÃO: CARREGAMENTO ASYNC
+//3. OTIMIZAÇÃO: CARREGAMENTO ASYNC
 const MAX_PARTICLES = 10000000;
 const particleGeometry = new THREE.BufferGeometry();
-const particlePositions = new Float32Array(MAX_PARTICLES * 3);
-
-function randn_bm() {
-    let u = 0, v = 0;
-    while(u === 0) u = Math.random();
-    while(v === 0) v = Math.random();
-    return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
-}
-
-const maxDistributionRadius = 35.0; 
-let currentIndex = 0;
-const chunkSize = 250000; 
+const maxDistributionRadius = 35.0;
 
 const loadingBar = document.getElementById('loading-bar');
 const loadingText = document.getElementById('loading-text');
 const loadingScreen = document.getElementById('loading-screen');
 
-function generateParticlesAsync() {
-    const target = Math.min(currentIndex + chunkSize, MAX_PARTICLES);
-    
-    for (let i = currentIndex; i < target; i++) {
-        particlePositions[i * 3] = randn_bm() * (maxDistributionRadius / 3.0); 
-        particlePositions[i * 3 + 1] = randn_bm() * (maxDistributionRadius / 3.0); 
-        particlePositions[i * 3 + 2] = randn_bm() * (maxDistributionRadius / 3.0); 
+//Inicia o Worker
+const worker = new Worker('worker.js');
+worker.onmessage = function(e) {
+    if (e.data.type === 'progress') {
+        loadingBar.style.width = `${e.data.progress}%`;
+        loadingText.innerText = `${Math.round(e.data.progress)}% (${e.data.count.toLocaleString()} partículas)`;
     }
-    
-    currentIndex = target;
-    const progress = Math.round((currentIndex / MAX_PARTICLES) * 100);
-    
-    loadingBar.style.width = `${progress}%`;
-    loadingText.innerText = `${progress}% (${currentIndex.toLocaleString()} partículas)`;
+    else if (e.data.type === 'done') {
+        loadingBar.style.width = '100%';
+        loadingText.innerText = `100% (${MAX_PARTICLES.toLocaleString()} partículas)`;
 
-    if (currentIndex < MAX_PARTICLES) {
-        requestAnimationFrame(generateParticlesAsync);
-    } else {
-        finishLoadingAndStart();
+        //Recebe o sinal da memória RAM
+        const positions = e.data.positions;
+
+        //Passa a memória direto para a placa de vídeo
+        particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+        finishLoadingAndStart()
     }
-}
+};
+
+worker.postMessage({
+    maxParticles: MAX_PARTICLES,
+    maxDistributionRadius: maxDistributionRadius
+});
 
 let particles;
+let targetStarkE = 0.0;
 let currentDrawCount = 100000;
 const particleUniforms = {
     u_time: { value: 0.0 },
     u_n: { value: 1.0 },
     u_l: { value: 0.0 },
     u_m: { value: 0.0 },
-    u_spin: { value: 1.0 }
+    u_n2: { value: 1.0 },
+    u_l2: { value: 0.0 },
+    u_m2: { value: 0.0 },
+    u_spin: { value: 1.0 },
+    u_starkE: { value: 0.0},
+    u_transition: { value: 0.0 },
+    u_excitation: { value: 0.0 }
 };
 
 function finishLoadingAndStart() {
     loadingScreen.style.opacity = '0';
     setTimeout(() => loadingScreen.style.display = 'none', 500);
 
-    particleGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
     particleGeometry.setDrawRange(0, currentDrawCount);
+
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
+    const vertexShaderFinal = vertexShader.replace("//gl_PointSize = 2.0;", `gl_PointSize = ${isMobile ? '3.5' : '2.0'};`);
 
     const particleMaterial = new THREE.ShaderMaterial({
         vertexShader: vertexShaderFinal,
@@ -252,6 +148,11 @@ function finishLoadingAndStart() {
     particles.frustumCulled = false;
     atomGroup.add(particles);
 
+    //TRAVA DE SINC DA UI
+    const slider = document.getElementById('input-particles');
+    slider.value = currentDrawCount / 100000;
+    document.getElementById('val-particles').innerText = (slider.value * 0.1).toFixed(1);
+
     requestAnimationFrame(animate);
 }
 
@@ -261,32 +162,64 @@ window.addEventListener('resize', () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-//5. ENGINE DE ANIMAÇÃO COM FPS ADAPTATIVO
+//4. ENGINE DE ANIMAÇÃO COM FPS ADAPTATIVO
 const clock = new THREE.Clock();
 let lastFrameTime = performance.now();
 let frameDropsCount = 0;
+let isTransitioning = false;
+let transitionProgress = 0.0;
+const transitionDuration = 2.0;
+
 
 function animate(currentTime) {
     requestAnimationFrame(animate);
     
+    particleUniforms.u_starkE.value += (targetStarkE - particleUniforms.u_starkE.value) * 0.1;
+    
     const deltaTime = currentTime - lastFrameTime;
     lastFrameTime = currentTime;
 
-    if (deltaTime > 45) { 
+    // LÓGICA DE SUPERPOSIÇÃO E EXCITAÇÃO (Elegante)
+    if (isTransitioning) {
+        transitionProgress += (deltaTime / 1000.0) / transitionDuration;
+        
+        if (transitionProgress >= 1.0) {
+            //FIM DO PROCESSO
+            isTransitioning = false;
+            transitionProgress = 1.0;
+            
+            particleUniforms.u_n.value = particleUniforms.u_n2.value;
+            particleUniforms.u_l.value = particleUniforms.u_l2.value;
+            particleUniforms.u_m.value = particleUniforms.u_m2.value;
+            particleUniforms.u_transition.value = 0.0; 
+            particleUniforms.u_excitation.value = 0.0; 
+        } else {
+            //Animação da Forma
+            let t = transitionProgress;
+            let smoothT = t * t * (3.0 - 2.0 * t);
+            particleUniforms.u_transition.value = smoothT;
+            
+            //Animação
+            let surge = 4.0 * t * (1.0 - t);
+            particleUniforms.u_excitation.value = surge;
+        }
+    }
+
+    if (deltaTime > 60) { 
         frameDropsCount++;
-        if (frameDropsCount > 10 && currentDrawCount > 100000) {
-            currentDrawCount = Math.max(100000, currentDrawCount - 200000); 
+        if (frameDropsCount > 30 && currentDrawCount > 100000) {
+            currentDrawCount = Math.max(100000, currentDrawCount - 100000); 
             particleGeometry.setDrawRange(0, currentDrawCount);
             
             const slider = document.getElementById('input-particles');
             slider.value = currentDrawCount / 100000;
             document.getElementById('val-particles').innerText = (slider.value * 0.1).toFixed(1);
             
-            frameDropsCount = 0; 
-            console.warn("Performance baixa: Densidade reduzida.");
+            frameDropsCount = -60; 
+            console.warn(`Lag detectado: Densidade reduzida para ${(currentDrawCount/100000).toFixed(1)}M para estabilizar.`);
         }
     } else {
-        frameDropsCount = Math.max(0, frameDropsCount - 1); 
+        frameDropsCount = Math.max(0, frameDropsCount - 2); 
     }
 
     particleUniforms.u_time.value = clock.getElapsedTime();
@@ -295,12 +228,20 @@ function animate(currentTime) {
     renderer.render(scene, camera);
 }
 
-//6. LÓGICA DO PAINEL E CONTROLES
+//5. LÓGICA DO PAINEL E CONTROLES
 const panel = document.getElementById('quantum-panel');
 const btnToggle = document.getElementById('toggle-panel');
 const btnUpdate = document.getElementById('btn-update');
 const errorMsg = document.getElementById('error-msg');
 const selectM = document.getElementById('input-m');
+const starkSlider = document.getElementById('input-stark');
+const starkLabel = document.getElementById('val-stark');
+
+starkSlider.addEventListener('input', () => {
+    const val_stark = parseFloat(starkSlider.value) * 0.1;
+    starkLabel.innerText = val_stark.toFixed(1);
+    targetStarkE = val_stark;
+})
 
 btnToggle.addEventListener('click', () => {
     panel.classList.toggle('hidden');
@@ -308,14 +249,17 @@ btnToggle.addEventListener('click', () => {
 
 window.updateMagOptions = function() {
     const currentL = parseInt(document.getElementById('input-l').value);
-    selectM.innerHTML = '';
-    for (let m = -currentL; m <= currentL; m++) {
-        let option = document.createElement('option');
-        option.value = m;
-        option.text = m;
-        selectM.appendChild(option);
-    }
-    selectM.value = "0";
+    const sliderM = document.getElementById('input-m');
+    const valM = document.getElementById('val-m');
+
+    sliderM.min = -currentL;
+    sliderM.max = currentL;
+
+    let currentM = parseInt(sliderM.value);
+    if (currentM > currentL) sliderM.value = currentL;
+    if (currentM < -currentL) sliderM.value = -currentL;
+
+    valM.innerText = sliderM.value;
 };
 
 function getOrbitalName(n, l, m) {
@@ -355,6 +299,9 @@ btnUpdate.addEventListener('click', () => {
     const val_m = parseFloat(document.getElementById('input-m').value);
     const val_spin = parseFloat(document.getElementById('input-spin').value);
     
+    // Captura a força do Campo Elétrico (dividindo por 10 porque o slider vai de -10 a 10)
+    const val_stark = parseFloat(document.getElementById('input-stark').value) * 0.1;
+    
     const sliderValue = parseInt(document.getElementById('input-particles').value);
     const requestedParticles = sliderValue * 100000;
 
@@ -369,15 +316,26 @@ btnUpdate.addEventListener('click', () => {
         particleGeometry.setDrawRange(0, currentDrawCount);
     }
 
-    particleUniforms.u_n.value = val_n;
-    particleUniforms.u_l.value = val_l; 
-    particleUniforms.u_m.value = val_m;
+    // Passa todos os dados atualizados para a Placa de Vídeo
+    // Define o Campo Elétrico e o Spin imediatamente
     particleUniforms.u_spin.value = val_spin;
+    particleUniforms.u_starkE.value = val_stark;
+
+    // Se a física nova for diferente da atual, iniciamos o balé quântico!
+    if (particleUniforms.u_n.value !== val_n || 
+        particleUniforms.u_l.value !== val_l || 
+        particleUniforms.u_m.value !== val_m) {
+        
+        particleUniforms.u_n2.value = val_n;
+        particleUniforms.u_l2.value = val_l;
+        particleUniforms.u_m2.value = val_m;
+        
+        isTransitioning = true;
+        transitionProgress = 0.0;
+    }
 
     errorMsg.style.color = "#00ff88";
     let spinText = val_spin > 0 ? "+1/2" : "-1/2";
-    errorMsg.innerHTML = `Orbital Atual: ${getOrbitalName(val_n, val_l, val_m)} (Spin ${spinText})`;
+    let starkText = val_stark !== 0 ? ` | E = ${val_stark.toFixed(1)}` : "";
+    errorMsg.innerHTML = `Orbital Atual: ${getOrbitalName(val_n, val_l, val_m)} (Spin ${spinText})${starkText}`;
 });
-
-//Inicia o Loop
-generateParticlesAsync();
