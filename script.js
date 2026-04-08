@@ -1,15 +1,17 @@
-// ATOMIC ORBITAL VISUALIZER
-// PATCH FINAL
-// 1. CÂMERA, CENA E CENÁRIO
+//ATOMIC ORBITAL VISUALIZER
+//PATCH FINAL
+//1. Câmera, Cena e Cenário
 const scene = new THREE.Scene();
 scene.fog = new THREE.FogExp2(0x000000, 0.015);
 
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 
-// Renderer com preserveDrawingBuffer para permitir tirar fotos e gravar vídeos
+// ADIÇÃO: preserveDrawingBuffer para permitir tirar fotos/vídeos
 const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+// ADIÇÃO: Otimização de nitidez baseada na tela
 let currentPixelRatio = Math.min(window.devicePixelRatio, 2.0);
 renderer.setPixelRatio(currentPixelRatio);
+
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
@@ -18,8 +20,6 @@ controls.enableDamping = true;
 controls.dampingFactor = 0.05;
 controls.minDistance = 15;
 controls.maxDistance = 150;
-// Impede o usuário de arrastar o átomo para fora do centro da tela
-controls.enablePan = false; 
 
 camera.position.z = 35;
 camera.position.y = 8;
@@ -30,7 +30,7 @@ const gridHelper = new THREE.GridHelper(gridSize, gridDivisions, 0x00aaff, 0x111
 gridHelper.position.y = -20; 
 scene.add(gridHelper);
 
-// 2. CONSTRUÇÃO E ESTRUTURA DO ÁTOMO
+//2. CONSTRUÇÃO E ESTRUTURA DO ÁTOMO
 const atomGroup = new THREE.Group();
 scene.add(atomGroup);
 
@@ -53,7 +53,8 @@ atomGroup.add(new THREE.Line(geoZ, matZ));
 
 function createTextSprite(text, color) {
     const canvas = document.createElement('canvas');
-    canvas.width = 128; canvas.height = 128;
+    canvas.width = 128;
+    canvas.height = 128;
     const ctx = canvas.getContext('2d');
     
     ctx.font = "Bold 50px monospace";
@@ -70,16 +71,18 @@ function createTextSprite(text, color) {
 }
 
 const labelOffset = axisLength + 2.0;
-atomGroup.add(createTextSprite("X", "#ff4444")).position.set(labelOffset, 0, 0);
-atomGroup.add(createTextSprite("-X", "#aa3333")).position.set(-labelOffset, 0, 0);
-atomGroup.add(createTextSprite("Y", "#44ff44")).position.set(0, labelOffset, 0);
-atomGroup.add(createTextSprite("-Y", "#33aa33")).position.set(0, -labelOffset, 0);
-atomGroup.add(createTextSprite("Z", "#4488ff")).position.set(0, 0, labelOffset);
-atomGroup.add(createTextSprite("-Z", "#3355aa")).position.set(0, 0, -labelOffset);
+const labelX = createTextSprite("X", "#ff4444"); labelX.position.set(labelOffset, 0, 0); atomGroup.add(labelX);
+const labelMinusX = createTextSprite("-X", "#aa3333"); labelMinusX.position.set(-labelOffset, 0, 0); atomGroup.add(labelMinusX);
+const labelY = createTextSprite("Y", "#44ff44"); labelY.position.set(0, labelOffset, 0); atomGroup.add(labelY);
+const labelMinusY = createTextSprite("-Y", "#33aa33"); labelMinusY.position.set(0, -labelOffset, 0); atomGroup.add(labelMinusY);
+const labelZ = createTextSprite("Z", "#4488ff"); labelZ.position.set(0, 0, labelOffset); atomGroup.add(labelZ);
+const labelMinusZ = createTextSprite("-Z", "#3355aa"); labelMinusZ.position.set(0, 0, -labelOffset); atomGroup.add(labelMinusZ);
 
-// 3. OTIMIZAÇÃO: CARREGAMENTO ASYNC E WORKER
+
+//3. OTIMIZAÇÃO: CARREGAMENTO ASYNC
 const MAX_PARTICLES = 10000000;
 const particleGeometry = new THREE.BufferGeometry();
+
 const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
 const maxDistributionRadius = isMobile ? 30.0 : 35.0;
 
@@ -87,6 +90,7 @@ const loadingBar = document.getElementById('loading-bar');
 const loadingText = document.getElementById('loading-text');
 const loadingScreen = document.getElementById('loading-screen');
 
+//Inicia o Worker
 const worker = new Worker('worker.js');
 worker.onmessage = function(e) {
     if (e.data.type === 'progress') {
@@ -96,8 +100,14 @@ worker.onmessage = function(e) {
     else if (e.data.type === 'done') {
         loadingBar.style.width = '100%';
         loadingText.innerText = `100% (${MAX_PARTICLES.toLocaleString()} partículas)`;
-        particleGeometry.setAttribute('position', new THREE.BufferAttribute(e.data.positions, 3));
-        finishLoadingAndStart();
+
+        //Recebe o sinal da memória RAM
+        const positions = e.data.positions;
+
+        //Passa a memória direto para a placa de vídeo
+        particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+        finishLoadingAndStart()
     }
 };
 
@@ -109,19 +119,22 @@ worker.postMessage({
 let particles;
 let targetStarkE = 0.0;
 let currentDrawCount = 100000;
-
 const particleUniforms = {
     u_time: { value: 0.0 },
-    u_n: { value: 1.0 }, u_l: { value: 0.0 }, u_m: { value: 0.0 },
-    u_n2: { value: 1.0 }, u_l2: { value: 0.0 }, u_m2: { value: 0.0 },
+    u_n: { value: 1.0 },
+    u_l: { value: 0.0 },
+    u_m: { value: 0.0 },
+    u_n2: { value: 1.0 },
+    u_l2: { value: 0.0 },
+    u_m2: { value: 0.0 },
     u_spin: { value: 1.0 },
     u_starkE: { value: 0.0},
     u_transition: { value: 0.0 },
     u_excitation: { value: 0.0 },
-    u_pointSize: { value: isMobile ? 3.5 : 2.0 }
+    u_pointSize: { value: isMobile ? 3.5 : 2.0 } // ADIÇÃO: Uniforme de tamanho
 };
 
-// Ajusta o tamanho da partícula para evitar Overdraw massivo em densidades altas
+// ADIÇÃO: Otimização dinâmica do tamanho da partícula baseada na quantidade
 function applyOptimizations() {
     let densityRatio = currentDrawCount / MAX_PARTICLES; 
     let baseSize = isMobile ? 3.5 : 2.0;
@@ -135,8 +148,11 @@ function finishLoadingAndStart() {
 
     particleGeometry.setDrawRange(0, currentDrawCount);
 
+    // ADIÇÃO: Se o shaders.js estiver usando a variável nova, usamos ela.
+    const vertexShaderFinal = vertexShader; 
+
     const particleMaterial = new THREE.ShaderMaterial({
-        vertexShader: vertexShader, 
+        vertexShader: vertexShaderFinal,
         fragmentShader: fragmentShader,
         uniforms: particleUniforms,
         transparent: true,
@@ -149,8 +165,9 @@ function finishLoadingAndStart() {
     particles.frustumCulled = false;
     atomGroup.add(particles);
 
-    applyOptimizations();
+    applyOptimizations(); // Chamada inicial de otimização
 
+    //TRAVA DE SINC DA UI
     const slider = document.getElementById('input-particles');
     slider.value = currentDrawCount / 100000;
     document.getElementById('val-particles').innerText = (slider.value * 0.1).toFixed(1);
@@ -164,7 +181,7 @@ window.addEventListener('resize', () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// 4. ENGINE DE ANIMAÇÃO COM FPS ADAPTATIVO
+//4. ENGINE DE ANIMAÇÃO COM FPS ADAPTATIVO E GERENCIADOR DE CRISE
 const clock = new THREE.Clock();
 let lastFrameTime = performance.now();
 let frameDropsCount = 0;
@@ -178,18 +195,19 @@ function animate(currentTime) {
     const deltaTime = currentTime - lastFrameTime;
     lastFrameTime = currentTime;
 
-    // Tempo isolado de FPS para evitar "pulos" de frame
+    // ADIÇÃO: Relógio estabilizado para evitar "pulos" visuais em travamentos
     const frameTime = Math.min(deltaTime / 1000, 1/30); 
     particleUniforms.u_time.value += frameTime;
     
     const lerpFactor = 1.0 - Math.pow(0.001, frameTime); 
     particleUniforms.u_starkE.value += (targetStarkE - particleUniforms.u_starkE.value) * lerpFactor;
 
-    // LÓGICA DE SUPERPOSIÇÃO E EXCITAÇÃO
+    // LÓGICA DE SUPERPOSIÇÃO E EXCITAÇÃO (Elegante)
     if (isTransitioning) {
         transitionProgress += frameTime / transitionDuration;
         
         if (transitionProgress >= 1.0) {
+            //FIM DO PROCESSO
             isTransitioning = false;
             transitionProgress = 1.0;
             
@@ -199,13 +217,18 @@ function animate(currentTime) {
             particleUniforms.u_transition.value = 0.0; 
             particleUniforms.u_excitation.value = 0.0; 
         } else {
+            //Animação da Forma
             let t = transitionProgress;
-            particleUniforms.u_transition.value = t * t * (3.0 - 2.0 * t);
-            particleUniforms.u_excitation.value = 4.0 * t * (1.0 - t);
+            let smoothT = t * t * (3.0 - 2.0 * t);
+            particleUniforms.u_transition.value = smoothT;
+            
+            //Animação
+            let surge = 4.0 * t * (1.0 - t);
+            particleUniforms.u_excitation.value = surge;
         }
     }
 
-    // GERENCIADOR DE CRISE (Reduz Pixel Ratio e Partículas se o hardware chorar)
+    // ADIÇÃO: Gerenciador de Crise (Atualizado para evitar o OOM Crash e engasgos longos)
     if (deltaTime > 50) { 
         frameDropsCount++;
         if (frameDropsCount > 10) {
@@ -213,15 +236,16 @@ function animate(currentTime) {
                 currentPixelRatio -= 0.2; 
                 renderer.setPixelRatio(currentPixelRatio);
                 frameDropsCount = -15; 
-            } else if (currentDrawCount > 100000) {
+            } 
+            else if (currentDrawCount > 100000) {
                 currentDrawCount = Math.max(100000, currentDrawCount - 200000); 
                 particleGeometry.setDrawRange(0, currentDrawCount);
                 
                 const slider = document.getElementById('input-particles');
                 slider.value = currentDrawCount / 100000;
-                document.getElementById('val-particles').innerText = (currentDrawCount / 1000000).toFixed(1);
+                document.getElementById('val-particles').innerText = (slider.value * 0.1).toFixed(1);
                 
-                renderer.renderLists.dispose(); // Limpeza de memória forçada
+                renderer.renderLists.dispose(); // Força liberação de memória RAM/VRAM
                 frameDropsCount = -20; 
             }
             applyOptimizations(); 
@@ -235,11 +259,12 @@ function animate(currentTime) {
     renderer.render(scene, camera);
 }
 
-// 5. LÓGICA DO PAINEL, UI E EXPORTAÇÃO
+//5. LÓGICA DO PAINEL E CONTROLES 
 const panel = document.getElementById('quantum-panel');
 const btnToggle = document.getElementById('toggle-panel');
 const btnUpdate = document.getElementById('btn-update');
 const errorMsg = document.getElementById('error-msg');
+const selectM = document.getElementById('input-m');
 const starkSlider = document.getElementById('input-stark');
 const starkLabel = document.getElementById('val-stark');
 
@@ -249,9 +274,11 @@ starkSlider.addEventListener('input', () => {
     targetStarkE = val_stark;
 })
 
-btnToggle.addEventListener('click', () => panel.classList.toggle('hidden'));
+btnToggle.addEventListener('click', () => {
+    panel.classList.toggle('hidden');
+});
 
-// Lógica do Modal de Ajuda
+// ADIÇÃO: Botões do Modal de Ajuda
 const helpModal = document.getElementById('help-modal');
 document.getElementById('btn-help').addEventListener('click', () => helpModal.classList.remove('hidden'));
 document.getElementById('close-help').addEventListener('click', () => helpModal.classList.add('hidden'));
@@ -259,9 +286,9 @@ helpModal.addEventListener('click', (event) => {
     if (event.target === helpModal) helpModal.classList.add('hidden');
 });
 
-// Exportar Imagem (Foto)
+// ADIÇÃO: Botões de Exportação
 document.getElementById('btn-export-img').addEventListener('click', () => {
-    renderer.render(scene, camera);
+    renderer.render(scene, camera); // Força um frame limpo
     const dataURL = renderer.domElement.toDataURL('image/png');
     const link = document.createElement('a');
     link.download = `orbital_${particleUniforms.u_n.value}_${particleUniforms.u_l.value}_${particleUniforms.u_m.value}.png`;
@@ -269,7 +296,6 @@ document.getElementById('btn-export-img').addEventListener('click', () => {
     link.click();
 });
 
-// Exportar Vídeo
 let mediaRecorder;
 let recordedChunks = [];
 const btnVid = document.getElementById('btn-export-vid');
@@ -319,6 +345,7 @@ window.updateMagOptions = function() {
     valM.innerText = sliderM.value;
 };
 
+// Nome dos Orbitais
 function getOrbitalName(n, l, m) {
     let name = `${n}`;
     if (l === 0) name += "s";
@@ -355,6 +382,8 @@ btnUpdate.addEventListener('click', () => {
     const val_l = parseFloat(document.getElementById('input-l').value);
     const val_m = parseFloat(document.getElementById('input-m').value);
     const val_spin = parseFloat(document.getElementById('input-spin').value);
+    
+    // Captura a força do Campo Elétrico (dividindo por 10 porque o slider vai de -10 a 10)
     const val_stark = parseFloat(document.getElementById('input-stark').value) * 0.1;
     
     const sliderValue = parseInt(document.getElementById('input-particles').value);
@@ -369,12 +398,15 @@ btnUpdate.addEventListener('click', () => {
     if (requestedParticles !== currentDrawCount) {
         currentDrawCount = requestedParticles;
         particleGeometry.setDrawRange(0, currentDrawCount);
-        applyOptimizations(); // Recalcula o tamanho se a densidade mudou
+        applyOptimizations(); // ADIÇÃO: Aplica a otimização ao mexer no slider
     }
 
+    // Passa todos os dados atualizados para a Placa de Vídeo
+    // Define o Campo Elétrico e o Spin imediatamente
     particleUniforms.u_spin.value = val_spin;
     particleUniforms.u_starkE.value = val_stark;
 
+    // Se a física nova for diferente da atual, inicia a transição
     if (particleUniforms.u_n.value !== val_n || 
         particleUniforms.u_l.value !== val_l || 
         particleUniforms.u_m.value !== val_m) {
