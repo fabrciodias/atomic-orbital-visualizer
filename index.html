@@ -16,45 +16,49 @@
         <p id="loading-text" style="margin-top: 15px; font-weight: bold;">0%</p>
     </div>
     
-    <button id="toggle-panel" style="position: absolute; top: 10px; right: 10px; z-index: 1000; background: #00aaff; color: #000; border: none; padding: 10px; border-radius: 4px; font-weight: bold; cursor: pointer;">☰ Controles</button>
-
-    <div id="quantum-panel">
-        <h3>Controle de Estado</h3>
-        <div class="input-group">
-            <label for="input-n">Principal (n):</label>
-            <input type="range" id="input-n" value="1" min="1" max="4" step="1" oninput="document.getElementById('val-n').innerText = this.value">
-            <span id="val-n" style="width: 20px; text-align: right;">1</span>
-        </div>
-        <div class="input-group">
-            <label for="input-l">Angular (l):</label>
-            <input type="range" id="input-l" value="0" min="0" max="3" step="1" oninput="document.getElementById('val-l').innerText = this.value; updateMagOptions();">
-            <span id="val-l" style="width: 20px; text-align: right;">0</span>
-        </div>
-        <div class="input-group">
-            <label for="input-m">Magnético (m):</label>
-            <select id="input-m" style="width: 60px; background: #111; color: #00aaff; border: 1px solid #555; border-radius: 4px; padding: 4px; text-align: center; font-weight: bold;">
-                <option value="0">0</option>
-            </select>
-        </div>
-        <div class="input-group">
-            <label for="input-spin">Spin (m<sub>s</sub>):</label>
-            <select id="input-spin" style="width: 70px; background: #111; color: #00aaff; border: 1px solid #555; border-radius: 4px; padding: 4px; text-align: center; font-weight: bold;">
-                <option value="1">+1/2</option>
-                <option value="-1">-1/2</option>
-            </select>
+    <button id="toggle-panel">☰ Controles</button>
+<div id="quantum-panel">
+        <div class="panel-column">
+            <h4 style="color: #00aaff; margin-bottom: 10px; border-bottom: 1px solid #333; padding-bottom: 5px;">Estado Quântico</h4>
+            <div class="input-group">
+                <label for="input-n">Principal (n):</label>
+                <input type="range" id="input-n" value="1" min="1" max="4" step="1" oninput="document.getElementById('val-n').innerText = this.value">
+                <span id="val-n" style="width: 25px; text-align: right;">1</span>
+            </div>
+            <div class="input-group">
+                <label for="input-l">Angular (l):</label>
+                <input type="range" id="input-l" value="0" min="0" max="3" step="1" oninput="document.getElementById('val-l').innerText = this.value; updateMagOptions();">
+                <span id="val-l" style="width: 25px; text-align: right;">0</span>
+            </div>
+            <div class="input-group">
+                <label for="input-m">Magnético (m):</label>
+                <input type="range" id="input-m" value="0" min="0" max="0" step="1" oninput="document.getElementById('val-m').innerText = this.value">
+                <span id="val-m" style="width: 25px; text-align: right;">0</span>
+            </div>
+            <div class="input-group">
+                <label for="input-spin">Spin (m<sub>s</sub>):</label>
+                <input type="range" id="input-spin" value="1" min="-1" max="1" step="2" oninput="document.getElementById('val-spin').innerText = this.value > 0 ? '+1/2' : '-1/2'">
+                <span id="val-spin" style="width: 45px; text-align: right;">+1/2</span>
+            </div>
         </div>
 
-        <h3 style="margin-top: 20px;">Performance</h3>
-        <div class="input-group" style="flex-direction: column; align-items: flex-start;">
-            <label for="input-particles" style="margin-bottom: 5px;">Densidade: <span id="val-particles">0.1</span> Milhões</label>
-            <input type="range" id="input-particles" value="1" min="1" max="100" step="1" style="width: 100%;" oninput="document.getElementById('val-particles').innerText = (this.value * 0.1).toFixed(1)">
+        <div class="panel-column">
+            <h4 style="color: #00aaff; margin-bottom: 10px; border-bottom: 1px solid #333; padding-bottom: 5px;">Sistema</h4>
+            <div class="input-group" style="flex-direction: column; align-items: flex-start;">
+                <label for="input-particles" style="margin-bottom: 5px;">Densidade: <span id="val-particles">0.1</span> Milhões</label>
+                <input type="range" id="input-particles" value="1" min="1" max="100" step="1" style="width: 100%;" oninput="document.getElementById('val-particles').innerText = (this.value * 0.1).toFixed(1)">
+            </div>
+            <button id="btn-update" style="margin-top: auto;">Alterar Orbital</button>
+            <p id="error-msg" style="margin-top: 10px; font-size: 12px; font-weight: bold; text-align: center; min-height: 15px;"></p>
         </div>
+    </div>
 
-        <button id="btn-update">Aplicar Física</button>
-        <p id="error-msg" style="margin-top: 15px; font-size: 14px; text-align: center; font-weight: bold;"></p>
+    <div id="stark-hud">
+        <label for="input-stark">E_z: <span id="val-stark" style="display:inline-block; width: 30px; text-align: right;">0.0</span></label>
+        <input type="range" id="input-stark" value="0" min="-10" max="10" step="1">
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-    <script src="script.js"></script>
+    <script src="shaders.js"></script>  <script src="script.js"></script>
 </body>
 </html>
