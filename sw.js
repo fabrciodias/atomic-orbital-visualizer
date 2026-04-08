@@ -1,4 +1,4 @@
-const CACHE_NAME = 'orbital-v1';
+const CACHE_NAME = 'orbital-v2';
 const ASSETS = [
     './',
     './index.html',
