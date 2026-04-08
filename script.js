@@ -6,13 +6,17 @@ const scene = new THREE.Scene();
 scene.fog = new THREE.FogExp2(0x000000, 0.015);
 
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
 const controls = new THREE.OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.05;
+
+controls.minDistance = 15;
+controls.maxDistance = 200;
+controls.enablePan = false;
 
 camera.position.z = 35;
 camera.position.y = 8;
@@ -338,4 +342,72 @@ btnUpdate.addEventListener('click', () => {
     let spinText = val_spin > 0 ? "+1/2" : "-1/2";
     let starkText = val_stark !== 0 ? ` | E = ${val_stark.toFixed(1)}` : "";
     errorMsg.innerHTML = `Orbital Atual: ${getOrbitalName(val_n, val_l, val_m)} (Spin ${spinText})${starkText}`;
+});
+
+//6. Funcionalidades do Patch 2.0 (Ajuda e Exportação)
+const helpModal = document.getElementById('help-modal');
+const btnHelp = document.getElementById('btn-help');
+const closeHelp = document.getElementById('close-help');
+
+//abre a ajuda
+btnHelp.addEventListener('click', ()=> {
+    helpModal.classList.remove('hidden');
+});
+
+//fecha a janela clicando no 'X'
+closeHelp.addEventListener('click', () => {
+    helpModal.classList.add('hidden');
+});
+
+//fecha a janela se clicar fora da caixa
+helpModal.addEventListener('click', (event) => {
+    if (event.target === helpModal) {
+        helpModal.classList.add('hidden');
+    }
+});
+
+//Tirar foto (PNG)
+document.getElementById('btn-export-img').addEventListener('click', () => {
+    renderer.render(scene, camera); // Força um frame limpo
+    const dataURL = renderer.domElement.toDataURL('image/png');
+    const link = document.createElement('a');
+    link.download = `orbital_${particleUniforms.u_n.value}_${particleUniforms.u_l.value}_${particleUniforms.u_m.value}.png`;
+    link.href = dataURL;
+    link.click();
+});
+//Gravar vídeo (WebM)
+let mediaRecorder;
+let recordedChunks = [];
+const btnVid = document.getElementById('btn-export-vid');
+
+btnVid.addEventListener('click', () => {
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+    } else {
+        recordedChunks = [];
+        const stream = renderer.domElement.captureStream(30); //30 FPS
+        mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+
+        mediaRecorder.ondataavailable = e => {
+            if (e.data.size > 0) recordedChunks.push(e.data);
+        };
+
+        mediaRecorder.onstop = () => {
+            const blob = new Blob(recordedChunks, { type: 'video/webm' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.download = `orbital_video.webm`;
+            link.href = url;
+            link.click();
+            URL.revokeObjectURL(url);
+
+            //Restaura o botão
+            btnVid.classList.remove('recording');
+            btnVid.innerText = "🎥 Gravar"
+        };
+
+        mediaRecorder.start();
+        btnVid.classList.add('recording');
+        btnVid.innerText = "🛑 Parar Gravação";
+    }
 });

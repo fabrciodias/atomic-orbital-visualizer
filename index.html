@@ -16,8 +16,23 @@
         <p id="loading-text" style="margin-top: 15px; font-weight: bold;">0%</p>
     </div>
     
-    <button id="toggle-panel">☰ Controles</button>
-<div id="quantum-panel">
+    <button id="btn-help" class="top-btn" style="right: 150px;">? Ajuda</button>
+    <button id="toggle-panel" class="top-btn" style="right: 20px;">☰ Controles</button>
+
+    <div id="help-modal" class="hidden">
+        <div class="modal-content">
+            <span id="close-help">&times;</span>
+            <h3 style="color: #00aaff; margin-bottom: 10px;">Guia Quântico</h3>
+            <p><b>Principal (n):</b> Define o nível de energia e o tamanho da nuvem.</p>
+            <p><b>Angular (l):</b> Define o formato do subnível (s, p, d, f).</p>
+            <p><b>Magnético (m):</b> Define a orientação espacial da nuvem.</p>
+            <p><b>Spin (m<sub>s</sub>):</b> O momento magnético intrínseco do elétron (+1/2 ou -1/2). Muda a cor da malha.</p>
+            <p><b>Campo (E_z):</b> Aplica o Efeito Stark, distorcendo o orbital via campo elétrico.</p>
+            <p style="margin-top: 10px; font-size: 12px; color: #888;">* Arraste a tela para girar. Use a roda do mouse para zoom.</p>
+        </div>
+    </div>
+
+    <div id="quantum-panel">
         <div class="panel-column">
             <h4 style="color: #00aaff; margin-bottom: 10px; border-bottom: 1px solid #333; padding-bottom: 5px;">Estado Quântico</h4>
             <div class="input-group">
@@ -48,8 +63,14 @@
                 <label for="input-particles" style="margin-bottom: 5px;">Densidade: <span id="val-particles">0.1</span> Milhões</label>
                 <input type="range" id="input-particles" value="1" min="1" max="100" step="1" style="width: 100%;" oninput="document.getElementById('val-particles').innerText = (this.value * 0.1).toFixed(1)">
             </div>
-            <button id="btn-update" style="margin-top: auto;">Alterar Orbital</button>
+            
             <p id="error-msg" style="margin-top: 10px; font-size: 12px; font-weight: bold; text-align: center; min-height: 15px;"></p>
+            <button id="btn-update" style="margin-top: auto;">Excitar Átomo</button>
+            
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <button id="btn-export-img" class="export-btn" title="Salvar Imagem">📷 Foto</button>
+                <button id="btn-export-vid" class="export-btn" title="Gravar Vídeo (10s)">🎥 Gravar</button>
+            </div>
         </div>
     </div>
 
