@@ -131,14 +131,14 @@ const particleUniforms = {
     u_starkE: { value: 0.0},
     u_transition: { value: 0.0 },
     u_excitation: { value: 0.0 },
-    u_pointSize: { value: isMobile ? 3.5 : 2.0 } // ADIÇÃO: Uniforme de tamanho
+    u_pointSize: { value: isMobile ? 2.0 : 1.5 } // ADIÇÃO: Uniforme de tamanho
 };
 
 // ADIÇÃO: Otimização dinâmica do tamanho da partícula baseada na quantidade
 function applyOptimizations() {
     let densityRatio = currentDrawCount / MAX_PARTICLES; 
-    let baseSize = isMobile ? 3.5 : 2.0;
-    let newSize = baseSize - (densityRatio * (isMobile ? 2.5 : 1.0));
+    let baseSize = isMobile ? 2.0 : 1.5;
+    let newSize = baseSize - (densityRatio * (isMobile ? 1.0 : 0.5));
     particleUniforms.u_pointSize.value = Math.max(0.5, newSize);
 }
 
